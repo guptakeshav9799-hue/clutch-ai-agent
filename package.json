@@ -1,0 +1,14 @@
+{
+  "name": "clutch",
+  "version": "1.0.0",
+  "description": "Clutch — Autonomous AI Deadline Execution Agent",
+  "scripts": {
+    "dev:server": "cd server && npm start",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && node server.js",
+    "deploy": "gcloud builds submit --config cloudbuild.yaml --project clutch-500813",
+    "deploy:image": "docker build -t gcr.io/clutch-500813/clutch:latest . && docker push gcr.io/clutch-500813/clutch:latest"
+  },
+  "private": true
+}

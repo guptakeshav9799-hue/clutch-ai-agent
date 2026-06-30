@@ -1,0 +1,97 @@
+steps:
+  # Build Docker image with Firebase config baked in
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:$BUILD_ID'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:latest'
+      # Pass VITE_ vars as build args so React bundle includes them
+      - '--build-arg'
+      - 'VITE_FIREBASE_API_KEY=$_VITE_FIREBASE_API_KEY'
+      - '--build-arg'
+      - 'VITE_FIREBASE_AUTH_DOMAIN=$_VITE_FIREBASE_AUTH_DOMAIN'
+      - '--build-arg'
+      - 'VITE_FIREBASE_PROJECT_ID=$_VITE_FIREBASE_PROJECT_ID'
+      - '--build-arg'
+      - 'VITE_FIREBASE_STORAGE_BUCKET=$_VITE_FIREBASE_STORAGE_BUCKET'
+      - '--build-arg'
+      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=$_VITE_FIREBASE_MESSAGING_SENDER_ID'
+      - '--build-arg'
+      - 'VITE_FIREBASE_APP_ID=$_VITE_FIREBASE_APP_ID'
+      - '--build-arg'
+      - 'VITE_FIREBASE_VAPID_KEY=$_VITE_FIREBASE_VAPID_KEY'
+      - '.'
+    id: 'build-image'
+
+  # Push both tags
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:$BUILD_ID']
+    id: 'push-sha'
+    waitFor: ['build-image']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:latest']
+    id: 'push-latest'
+    waitFor: ['build-image']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'clutch'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:$BUILD_ID'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--max-instances'
+      - '5'
+      - '--min-instances'
+      - '0'
+      - '--concurrency'
+      - '80'
+      - '--timeout'
+      - '300'
+      - '--set-env-vars'
+      - 'NODE_ENV=production,GEMINI_API_KEY=$_GEMINI_API_KEY,FIREBASE_PROJECT_ID=$_FIREBASE_PROJECT_ID,FIREBASE_CLIENT_EMAIL=$_FIREBASE_CLIENT_EMAIL,JWT_SECRET=$_JWT_SECRET,GOOGLE_CLIENT_ID=$_GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$_GOOGLE_CLIENT_SECRET'
+      - '--set-secrets'
+      - 'FIREBASE_PRIVATE_KEY=firebase-private-key:latest'
+    id: 'deploy'
+    waitFor: ['push-sha']
+
+images:
+  - 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:$BUILD_ID'
+  - 'us-central1-docker.pkg.dev/clutch-500813/cloud-run-source-deploy/clutch:latest'
+
+substitutions:
+  _VITE_FIREBASE_API_KEY: 'your-firebase-api-key'
+  _VITE_FIREBASE_AUTH_DOMAIN: 'clutch-500813.firebaseapp.com'
+  _VITE_FIREBASE_PROJECT_ID: 'clutch-500813'
+  _VITE_FIREBASE_STORAGE_BUCKET: 'clutch-500813.appspot.com'
+  _VITE_FIREBASE_MESSAGING_SENDER_ID: '299652595285'
+  _VITE_FIREBASE_APP_ID: '1:299652595285:web:523572ba0841ae4561dedc'
+  _VITE_FIREBASE_VAPID_KEY: 'BNpmwOunCbOi94gcW-qXlQmE1QUlAd1q88KeAajNZ4rRNps-Oal8J3Eu1x8sbuHGGcGcyYgVJNjQQueot1UoUis'
+  _GEMINI_API_KEY: 'your-gemini-api-key'
+  _FIREBASE_PROJECT_ID: 'clutch-500813'
+  _FIREBASE_CLIENT_EMAIL: 'firebase-adminsdk-fbsvc@clutch-500813.iam.gserviceaccount.com'
+  _JWT_SECRET: 'your-jwt-secret'
+  _GOOGLE_CLIENT_ID: '299652595285-5pfv1n8vief9tj0j3h86t0ej90sasnk1.apps.googleusercontent.com'
+  _GOOGLE_CLIENT_SECRET: 'your-google-client-secret'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1800s'
