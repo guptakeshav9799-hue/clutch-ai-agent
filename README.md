@@ -1,6 +1,6 @@
 # Clutch — Autonomous AI Deadline Execution Agent
 
-Clutch is an AI-powered logistics and task management web application that works *for* you. While you sleep, Clutch proactively manages your deadlines, breaks down tasks, creates Google Docs, blocks your calendar, and helps you overcome procrastination using behavioral psychology.
+Clutch is an AI-powered logistics and task management Progressive Web App (PWA) that works *for* you. While you sleep, Clutch proactively manages your deadlines, breaks down tasks, creates Google Docs, blocks your calendar, and helps you overcome procrastination using behavioral psychology.
 
 ## Features
 
